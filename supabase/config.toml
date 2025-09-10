@@ -1,1 +1,4 @@
 project_id = "fhtvxziachtotvtjxsgp"
+
+[functions.ai-mediator]
+verify_jwt = true

@@ -30,11 +30,11 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button variant="hero" size="lg" className="text-lg px-8">
+              <Button variant="hero" size="lg" className="text-lg px-8" onClick={() => window.location.href = '/auth'}>
                 Попробовать бесплатно
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button variant="soft" size="lg" className="text-lg px-8">
+              <Button variant="soft" size="lg" className="text-lg px-8" onClick={() => window.location.href = '#features'}>
                 Узнать больше
               </Button>
             </div>
