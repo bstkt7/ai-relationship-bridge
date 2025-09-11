@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Heart, LogOut, Users, MessageCircle, Lightbulb, CreditCard } from 'lucide-react';
+import { LogOut, Users, MessageCircle, Lightbulb, CreditCard } from 'lucide-react';
 import PaymentSection from '@/components/dashboard/PaymentSection';
 import ConversationCard from '@/components/dashboard/ConversationCard';
 import MobileNav from '@/components/dashboard/MobileNav';
@@ -294,7 +294,11 @@ const Dashboard = () => {
     <div className="hidden md:block w-64 bg-card border-r border-border p-6">
       <div className="space-y-4">
         <div className="flex items-center mb-6">
-          <Heart className="h-6 w-6 text-primary mr-2" />
+          <img 
+            src="/lovable-uploads/a82b8ac7-60ed-4cd5-8df5-0ad981eaf185.png" 
+            alt="BridgeAI Logo" 
+            className="w-6 h-6 object-contain mr-2"
+          />
           <h2 className="text-lg font-bold text-primary">BridgeAI</h2>
         </div>
         
@@ -506,7 +510,11 @@ const Dashboard = () => {
           {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border">
             <div className="flex items-center">
-              <Heart className="h-6 w-6 text-primary mr-2" />
+              <img 
+                src="/lovable-uploads/a82b8ac7-60ed-4cd5-8df5-0ad981eaf185.png" 
+                alt="BridgeAI Logo" 
+                className="w-6 h-6 object-contain mr-2"
+              />
               <h1 className="text-lg font-bold text-primary">BridgeAI</h1>
             </div>
             <MobileNav

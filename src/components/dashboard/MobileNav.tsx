@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Heart, Users, MessageCircle, Lightbulb, CreditCard, LogOut } from 'lucide-react';
+import { Menu, Users, MessageCircle, Lightbulb, CreditCard, LogOut } from 'lucide-react';
 
 interface MobileNavProps {
   currentSection: string;
@@ -37,7 +37,11 @@ const MobileNav = ({ currentSection, onSectionChange, onSignOut, userName }: Mob
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center mb-6">
-              <Heart className="h-6 w-6 text-primary mr-2" />
+              <img 
+                src="/lovable-uploads/a82b8ac7-60ed-4cd5-8df5-0ad981eaf185.png" 
+                alt="BridgeAI Logo" 
+                className="w-6 h-6 object-contain mr-2"
+              />
               <h2 className="text-lg font-bold text-primary">BridgeAI</h2>
             </div>
 
