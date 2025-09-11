@@ -35,7 +35,7 @@ interface AdminStats {
 }
 
 const Admin = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -45,8 +45,11 @@ const Admin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    checkAdminAccess();
-  }, [user]);
+    // Ждем завершения загрузки авторизации
+    if (!authLoading) {
+      checkAdminAccess();
+    }
+  }, [user, authLoading]);
 
   const checkAdminAccess = async () => {
     if (!user) {
@@ -54,76 +57,90 @@ const Admin = () => {
       return;
     }
 
-    // ВРЕМЕННО: разрешаем доступ всем аутентифицированным пользователям
-    console.log('Development mode: allowing admin access to all authenticated users');
-    setIsAdmin(true);
-    
-    // Загружаем статистику в фоне, не блокируя доступ
-    fetchAdminStats().catch(error => {
-      console.error('Error fetching admin stats:', error);
-      // Не блокируем доступ из-за ошибки статистики
-    });
-    
-    setIsLoading(false);
-
-    // TODO: Включить проверку прав в продакшене
-    /*
     try {
-      // Проверяем, является ли пользователь админом через функцию
-      const { data: isAdminResult, error: roleError } = await supabase
-        .rpc('is_admin', { user_id_param: user.id });
+      console.log('Checking admin access for user:', user.email);
+      
+      // Сначала проверяем роль в базе данных
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
 
-      if (roleError) {
-        console.error('Error checking admin role:', roleError);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
         // Fallback: проверяем по email для совместимости
         const adminEmails = [
           'admin@bridgeai.com', 
           'beest@example.com',
-          // Добавьте ваш email здесь
-          // 'ваш-email@example.com'
+          // Временно разрешаем доступ всем аутентифицированным пользователям
+          user.email || ''
         ];
         
-        // Также проверяем по домену (для разработки)
-        const isAdminUser = adminEmails.includes(user.email || '') || 
-                           (user.email && user.email.includes('@gmail.com')); // Временно разрешаем всем gmail
+        const isAdminUser = adminEmails.includes(user.email || '');
 
         if (!isAdminUser) {
-          toast({
-            title: "Доступ запрещен",
-            description: "У вас нет прав администратора",
-            variant: "destructive",
-          });
-          navigate('/dashboard');
+          console.log('Development mode: allowing admin access to all authenticated users');
+          setIsAdmin(true);
+          fetchAdminStats();
+          setIsLoading(false);
           return;
         }
-      } else if (!isAdminResult) {
+      }
+      
+      // Проверяем роль из профиля
+      const userRole = profileData?.role;
+      console.log('User role from database:', userRole);
+      
+      if (userRole === 'admin') {
+        console.log('User has admin role in database');
+        setIsAdmin(true);
+        fetchAdminStats();
+      } else {
+        // Временно разрешаем доступ всем пользователям для разработки
+        console.log('Development mode: allowing admin access to all authenticated users');
+        setIsAdmin(true);
+        fetchAdminStats();
+        
+        // В продакшене раскомментировать эти строки:
+        /*
+        console.log('User does not have admin role, redirecting...');
         toast({
           title: "Доступ запрещен",
-          description: "У вас нет прав администратора",
+          description: "У вас нет прав администратора. Используйте кнопку 'Стать админом' в разделе Роли.",
           variant: "destructive",
         });
         navigate('/dashboard');
         return;
+        */
       }
-
-      setIsAdmin(true);
-      fetchAdminStats();
+      
     } catch (error) {
       console.error('Error checking admin access:', error);
+      
+      // В случае ошибки временно разрешаем доступ
+      console.log('Error occurred, but allowing access in development mode');
+      setIsAdmin(true);
+      fetchAdminStats();
+      
+      // В продакшене раскомментировать эти строки:
+      /*
       toast({
         title: "Ошибка",
         description: "Не удалось проверить права доступа",
         variant: "destructive",
       });
       navigate('/dashboard');
+      */
     } finally {
       setIsLoading(false);
     }
-    */
   };
 
   const fetchAdminStats = async () => {
     try {
+      console.log('Fetching admin statistics...');
+      
       // Получаем общую статистику
       const [usersResult, couplesResult, conversationsResult, todayConversationsResult] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
@@ -138,17 +155,75 @@ const Admin = () => {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active');
 
-      setStats({
+      const statsData = {
         totalUsers: usersResult.count || 0,
         totalCouples: couplesResult.count || 0,
         activeCouples: activeCouplesResult.count || 0,
         totalConversations: conversationsResult.count || 0,
         todayConversations: todayConversationsResult.count || 0,
-      });
+      };
+      
+      console.log('Admin stats loaded:', statsData);
+      setStats(statsData);
     } catch (error) {
       console.error('Error fetching admin stats:', error);
+      // Не блокируем доступ из-за ошибки статистики
+      toast({
+        title: "Предупреждение",
+        description: "Не удалось загрузить статистику, но доступ к админке сохранен",
+        variant: "destructive",
+      });
     }
   };
+
+  // Показываем загрузку только если идет проверка авторизации
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-lavender-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">
+            {authLoading ? 'Проверка авторизации...' : 'Проверка прав доступа...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Если пользователь не авторизован, перенаправляем
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
+  // Если нет прав админа, показываем сообщение (в продакшене)
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-lavender-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-red-500" />
+              Доступ запрещен
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              У вас нет прав администратора для доступа к этой странице.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/dashboard')} className="flex-1">
+                Вернуться в дашборд
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/auth')} className="flex-1">
+                Войти заново
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -205,6 +280,10 @@ const Admin = () => {
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div className="mb-3 p-2 bg-muted/50 rounded text-xs text-center">
+          <p className="text-muted-foreground">Вошли как:</p>
+          <p className="font-medium truncate">{user?.email}</p>
+        </div>
         <Button
           variant="ghost"
           className="w-full justify-start text-destructive hover:text-destructive"
@@ -327,6 +406,14 @@ const Admin = () => {
               <span className="text-sm">API</span>
               <Badge variant="default">Онлайн</Badge>
             </div>
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ Админка работает в режиме разработки
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Доступ разрешен всем аутентифицированным пользователям
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -354,21 +441,6 @@ const Admin = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-lavender-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Проверка прав доступа...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-lavender-50">
       <div className="flex h-screen">
@@ -387,7 +459,9 @@ const Admin = () => {
               <Menu className="h-4 w-4" />
             </Button>
             <span className="font-semibold">BridgeAI Admin</span>
-            <div></div>
+            <Badge variant="outline" className="text-xs">
+              {user?.email?.split('@')[0]}
+            </Badge>
           </div>
 
           {/* Content */}
