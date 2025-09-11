@@ -174,6 +174,32 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      find_couple_by_invite_code: {
+        Args: {
+          invite_code_param: string
+        }
+        Returns: {
+          id: string
+          partner1_id: string
+          partner2_id: string
+          invite_code: string
+          status: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      join_couple_by_invite_code: {
+        Args: {
+          invite_code_param: string
+          user_id_param: string
+        }
+        Returns: {
+          success: boolean
+          error?: string
+          message?: string
+          couple_id?: string
+        }
+      }
     }
     Enums: {
       [_ in never]: never

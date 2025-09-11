@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LogOut, Users, MessageCircle, Lightbulb, CreditCard } from 'lucide-react';
+import { LogOut, Users, MessageCircle, Lightbulb, CreditCard, Copy, Check } from 'lucide-react';
 import PaymentSection from '@/components/dashboard/PaymentSection';
 import ConversationCard from '@/components/dashboard/ConversationCard';
 import MobileNav from '@/components/dashboard/MobileNav';
@@ -51,6 +51,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [isPartner1, setIsPartner1] = useState(false);
   const [currentSection, setCurrentSection] = useState('status');
+  const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -107,15 +108,33 @@ const Dashboard = () => {
   };
 
   const generateInviteCode = async () => {
+    if (!user?.id) return;
+
     try {
+      // Check if user already has a couple
+      const { data: existingCouple } = await supabase
+        .from('couples')
+        .select('*')
+        .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
+        .single();
+
+      if (existingCouple) {
+        toast({
+          title: "У вас уже есть пара",
+          description: `Ваш код приглашения: ${existingCouple.invite_code}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data } = await supabase.rpc('generate_invite_code');
       const newInviteCode = data;
 
       const { error } = await supabase
         .from('couples')
         .insert({
-          partner1_id: user?.id,
-          partner2_id: user?.id, // Temporary, will be updated when partner joins
+          partner1_id: user.id,
+          partner2_id: user.id, // Temporary, will be updated when partner joins
           invite_code: newInviteCode,
           status: 'pending'
         });
@@ -139,48 +158,31 @@ const Dashboard = () => {
   };
 
   const joinCouple = async () => {
-    if (!inviteCode.trim()) return;
+    if (!inviteCode.trim() || !user?.id) return;
 
     try {
-      const { data: existingCouple } = await supabase
-        .from('couples')
-        .select('*')
-        .eq('invite_code', inviteCode.toUpperCase())
-        .single();
-
-      if (!existingCouple) {
-        toast({
-          title: "Код не найден",
-          description: "Проверьте правильность кода приглашения",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (existingCouple.partner1_id === user?.id) {
-        toast({
-          title: "Это ваш собственный код",
-          description: "Вы не можете присоединиться к своему же коду",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('couples')
-        .update({
-          partner2_id: user?.id,
-          status: 'active'
-        })
-        .eq('id', existingCouple.id);
+      const { data, error } = await supabase.rpc('join_couple_by_invite_code', {
+        invite_code_param: inviteCode.trim(),
+        user_id_param: user.id
+      });
 
       if (error) throw error;
 
+      if (!data.success) {
+        toast({
+          title: "Ошибка",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Успешно!",
-        description: "Вы присоединились к паре",
+        description: data.message,
       });
 
+      setInviteCode(''); // Clear the input
       fetchUserData();
     } catch (error) {
       console.error('Error joining couple:', error);
@@ -279,6 +281,25 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const copyInviteCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      toast({
+        title: "Код скопирован!",
+        description: "Код приглашения скопирован в буфер обмена",
+      });
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy code:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скопировать код",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!profile) {
@@ -415,7 +436,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm text-muted-foreground">
                     Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
                   </p>
@@ -425,6 +446,14 @@ const Dashboard = () => {
                     </span>
                   </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyInviteCode(couple.invite_code)}
+                  className="ml-4"
+                >
+                  {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
               </div>
             </CardContent>
           </Card>
