@@ -58,7 +58,7 @@ export type Database = {
           id: string
           invite_code: string | null
           partner1_id: string
-          partner2_id: string
+          partner2_id: string | null
           status: string
           updated_at: string
         }
@@ -67,7 +67,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           partner1_id: string
-          partner2_id: string
+          partner2_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -76,7 +76,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           partner1_id?: string
-          partner2_id?: string
+          partner2_id?: string | null
           status?: string
           updated_at?: string
         }

@@ -26,7 +26,7 @@ interface Couple {
   invite_code: string;
   status: string;
   partner1_id: string;
-  partner2_id: string;
+  partner2_id: string | null;
 }
 
 interface Conversation {
@@ -134,7 +134,7 @@ const Dashboard = () => {
         .from('couples')
         .insert({
           partner1_id: user.id,
-          partner2_id: user.id, // Temporary, will be updated when partner joins
+          partner2_id: null, // Will be set when partner joins
           invite_code: newInviteCode,
           status: 'pending'
         });
@@ -441,8 +441,8 @@ const Dashboard = () => {
                     Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Статус: <span className={`font-semibold ${couple.status === 'active' ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {couple.status === 'active' ? 'Активна' : 'Ожидание партнера'}
+                    Статус: <span className={`font-semibold ${couple.status === 'active' && couple.partner2_id ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {couple.status === 'active' && couple.partner2_id ? 'Активна' : 'Ожидание партнера'}
                     </span>
                   </p>
                 </div>

@@ -1,6 +1,7 @@
--- Fix RLS policy to allow searching for invite codes
--- This policy allows users to search for couples by invite_code even if they're not yet a member
+-- Apply migration for invite code fixes
+-- Run this in Supabase SQL Editor
 
+-- Fix RLS policy to allow searching for invite codes
 -- Drop the existing restrictive policy
 DROP POLICY IF EXISTS "Users can view their couples" ON public.couples;
 
@@ -15,7 +16,20 @@ USING (
   invite_code IS NOT NULL
 );
 
--- Also create a function to safely find and join a couple by invite code
+-- Fix the couples table to allow partner2_id to be NULL initially
+-- Drop the existing unique constraint
+ALTER TABLE public.couples DROP CONSTRAINT IF EXISTS couples_partner1_id_partner2_id_key;
+
+-- Make partner2_id nullable
+ALTER TABLE public.couples ALTER COLUMN partner2_id DROP NOT NULL;
+
+-- Create a new constraint that allows NULL partner2_id when status is 'pending'
+-- and requires different IDs when status is 'active'
+CREATE UNIQUE INDEX couples_partners_unique 
+ON public.couples (partner1_id, partner2_id) 
+WHERE status = 'active' AND partner2_id IS NOT NULL;
+
+-- Create function to safely find and join a couple by invite code
 CREATE OR REPLACE FUNCTION public.find_couple_by_invite_code(invite_code_param TEXT)
 RETURNS TABLE (
   id UUID,
@@ -102,16 +116,3 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION public.join_couple_by_invite_code(TEXT, UUID) TO authenticated;
-
--- Fix the couples table to allow partner2_id to be NULL initially
--- Drop the existing unique constraint
-ALTER TABLE public.couples DROP CONSTRAINT IF EXISTS couples_partner1_id_partner2_id_key;
-
--- Make partner2_id nullable
-ALTER TABLE public.couples ALTER COLUMN partner2_id DROP NOT NULL;
-
--- Create a new constraint that allows NULL partner2_id when status is 'pending'
--- and requires different IDs when status is 'active'
-CREATE UNIQUE INDEX couples_partners_unique 
-ON public.couples (partner1_id, partner2_id) 
-WHERE status = 'active' AND partner2_id IS NOT NULL;
