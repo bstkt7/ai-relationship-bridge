@@ -9,10 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LogOut, Users, MessageCircle, Lightbulb, CreditCard, Copy, Check } from 'lucide-react';
+import { LogOut, Users, MessageCircle, Lightbulb, CreditCard, Copy, Check, Settings, BarChart3, User } from 'lucide-react';
 import PaymentSection from '@/components/dashboard/PaymentSection';
 import ConversationCard from '@/components/dashboard/ConversationCard';
 import MobileNav from '@/components/dashboard/MobileNav';
+import InviteCodeManagement from '@/components/dashboard/InviteCodeManagement';
+import PartnerInfo from '@/components/dashboard/PartnerInfo';
+import Statistics from '@/components/dashboard/Statistics';
+import CoupleSettings from '@/components/dashboard/CoupleSettings';
 
 interface Profile {
   id: string;
@@ -27,6 +31,8 @@ interface Couple {
   status: string;
   partner1_id: string;
   partner2_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Conversation {
@@ -75,13 +81,13 @@ const Dashboard = () => {
       }
 
       // Fetch couple information
-      const { data: coupleData } = await supabase
+      const { data: couplesData } = await supabase
         .from('couples')
         .select('*')
-        .or(`partner1_id.eq.${user?.id},partner2_id.eq.${user?.id}`)
-        .single();
+        .or(`partner1_id.eq.${user?.id},partner2_id.eq.${user?.id}`);
 
-      if (coupleData) {
+      if (couplesData && couplesData.length > 0) {
+        const coupleData = couplesData[0]; // Берем первую пару
         setCouple(coupleData);
         setIsPartner1(coupleData.partner1_id === user?.id);
         fetchConversations(coupleData.id);
@@ -112,13 +118,13 @@ const Dashboard = () => {
 
     try {
       // Check if user already has a couple
-      const { data: existingCouple } = await supabase
+      const { data: existingCouples } = await supabase
         .from('couples')
         .select('*')
-        .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
-        .single();
+        .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`);
 
-      if (existingCouple) {
+      if (existingCouples && existingCouples.length > 0) {
+        const existingCouple = existingCouples[0];
         toast({
           title: "У вас уже есть пара",
           description: `Ваш код приглашения: ${existingCouple.invite_code}`,
@@ -161,6 +167,21 @@ const Dashboard = () => {
     if (!inviteCode.trim() || !user?.id) return;
 
     try {
+      // Сначала проверяем, есть ли у пользователя уже пара
+      const { data: existingCouples } = await supabase
+        .from('couples')
+        .select('*')
+        .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`);
+
+      if (existingCouples && existingCouples.length > 0) {
+        toast({
+          title: "У вас уже есть пара",
+          description: "Вы не можете присоединиться к другой паре",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error } = await supabase.rpc('join_couple_by_invite_code', {
         invite_code_param: inviteCode.trim(),
         user_id_param: user.id
@@ -338,6 +359,22 @@ const Dashboard = () => {
             Статус пары
           </Button>
           <Button
+            variant={currentSection === 'partner' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('partner')}
+          >
+            <User className="h-4 w-4 mr-3" />
+            Партнер
+          </Button>
+          <Button
+            variant={currentSection === 'invite' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('invite')}
+          >
+            <Copy className="h-4 w-4 mr-3" />
+            Коды приглашения
+          </Button>
+          <Button
             variant={currentSection === 'message' ? 'secondary' : 'ghost'}
             className="w-full justify-start"
             onClick={() => setCurrentSection('message')}
@@ -352,6 +389,22 @@ const Dashboard = () => {
           >
             <Lightbulb className="h-4 w-4 mr-3" />
             Рекомендации
+          </Button>
+          <Button
+            variant={currentSection === 'statistics' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('statistics')}
+          >
+            <BarChart3 className="h-4 w-4 mr-3" />
+            Статистика
+          </Button>
+          <Button
+            variant={currentSection === 'settings' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('settings')}
+          >
+            <Settings className="h-4 w-4 mr-3" />
+            Настройки
           </Button>
           <Button
             variant={currentSection === 'payment' ? 'secondary' : 'ghost'}
@@ -427,36 +480,79 @@ const Dashboard = () => {
     switch (currentSection) {
       case 'status':
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                Статус пары
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">
-                    Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Статус: <span className={`font-semibold ${couple.status === 'active' && couple.partner2_id ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {couple.status === 'active' && couple.partner2_id ? 'Активна' : 'Ожидание партнера'}
-                    </span>
-                  </p>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Статус пары
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">
+                      Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Статус: <span className={`font-semibold ${couple.status === 'active' && couple.partner2_id ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {couple.status === 'active' && couple.partner2_id ? 'Активна' : 'Ожидание партнера'}
+                      </span>
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyInviteCode(couple.invite_code)}
+                    className="ml-4"
+                  >
+                    {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyInviteCode(couple.invite_code)}
-                  className="ml-4"
-                >
-                  {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            
+            <InviteCodeManagement 
+              couple={couple} 
+              isPartner1={isPartner1} 
+              onCoupleUpdate={fetchUserData} 
+            />
+          </div>
+        );
+
+      case 'partner':
+        return (
+          <PartnerInfo 
+            couple={couple} 
+            currentUserId={user?.id || ''} 
+          />
+        );
+
+      case 'invite':
+        return (
+          <InviteCodeManagement 
+            couple={couple} 
+            isPartner1={isPartner1} 
+            onCoupleUpdate={fetchUserData} 
+          />
+        );
+
+      case 'statistics':
+        return (
+          <Statistics 
+            coupleId={couple.id} 
+            currentPlan="free" 
+            messagesUsed={2} 
+            messagesLimit={5} 
+          />
+        );
+
+      case 'settings':
+        return (
+          <CoupleSettings 
+            couple={couple} 
+            onSettingsUpdate={fetchUserData} 
+          />
         );
 
       case 'message':
