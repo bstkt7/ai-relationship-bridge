@@ -57,7 +57,13 @@ const Admin = () => {
     // ВРЕМЕННО: разрешаем доступ всем аутентифицированным пользователям
     console.log('Development mode: allowing admin access to all authenticated users');
     setIsAdmin(true);
-    fetchAdminStats();
+    
+    // Загружаем статистику в фоне, не блокируя доступ
+    fetchAdminStats().catch(error => {
+      console.error('Error fetching admin stats:', error);
+      // Не блокируем доступ из-за ошибки статистики
+    });
+    
     setIsLoading(false);
 
     // TODO: Включить проверку прав в продакшене

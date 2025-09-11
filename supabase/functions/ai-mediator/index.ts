@@ -48,23 +48,37 @@ serve(async (req) => {
 Проанализируй эти сообщения и дай рекомендации для улучшения понимания между партнерами.`;
 
     // Получаем токен доступа для GigaChat
+    const rqUID = crypto.randomUUID();
     const tokenResponse = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${gigachatApiKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
-        'RqUID': crypto.randomUUID(),
+        'RqUID': rqUID,
       },
       body: 'scope=GIGACHAT_API_PERS',
     });
 
     if (!tokenResponse.ok) {
-      console.error('GigaChat token error:', tokenResponse.status, await tokenResponse.text());
-      throw new Error(`GigaChat token error: ${tokenResponse.status}`);
+      const errorText = await tokenResponse.text();
+      console.error('GigaChat token error:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorText,
+        rqUID: rqUID
+      });
+      throw new Error(`GigaChat token error: ${tokenResponse.status} - ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
+    console.log('GigaChat token received successfully');
+    
+    if (!tokenData.access_token) {
+      console.error('No access token in response:', tokenData);
+      throw new Error('No access token received from GigaChat');
+    }
+    
     const accessToken = tokenData.access_token;
 
     // Отправляем запрос к GigaChat API
@@ -87,11 +101,26 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('GigaChat API error:', response.status, await response.text());
-      throw new Error(`GigaChat API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('GigaChat API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`GigaChat API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('GigaChat API response received:', { 
+      choices: data.choices?.length,
+      usage: data.usage 
+    });
+    
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in GigaChat response:', data);
+      throw new Error('No response choices from GigaChat');
+    }
+    
     const recommendation = data.choices[0].message.content;
 
     // Simple emotion analysis based on keywords
