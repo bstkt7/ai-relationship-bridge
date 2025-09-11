@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-bridge.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-sky-blue-light/20 to-lavender-light/30 py-20 md:py-32">
       <div className="container max-w-screen-xl">
@@ -30,11 +33,11 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button variant="hero" size="lg" className="text-lg px-8" onClick={() => window.location.href = '/auth'}>
+              <Button variant="hero" size="lg" className="text-lg px-8" onClick={() => navigate('/auth')}>
                 Попробовать бесплатно
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button variant="soft" size="lg" className="text-lg px-8" onClick={() => window.location.href = '#features'}>
+              <Button variant="soft" size="lg" className="text-lg px-8" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
                 Узнать больше
               </Button>
             </div>

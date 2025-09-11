@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-xl items-center justify-between">
@@ -30,10 +33,10 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={() => window.location.href = '/auth'}>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
             Войти
           </Button>
-          <Button variant="hero" size="sm" onClick={() => window.location.href = '/auth'}>
+          <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
             Попробовать бесплатно
           </Button>
         </div>
