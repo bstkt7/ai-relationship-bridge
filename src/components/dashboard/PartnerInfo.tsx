@@ -51,12 +51,24 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', partnerId)
-        .single();
+        .eq('user_id', partnerId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching partner profile:', error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить информацию о партнере",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      setPartnerProfile(data);
+      if (data && data.length > 0) {
+        setPartnerProfile(data[0]);
+      } else {
+        // Профиль партнера не найден
+        setPartnerProfile(null);
+      }
     } catch (error) {
       console.error('Error fetching partner profile:', error);
       toast({
@@ -104,7 +116,7 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
     );
   }
 
-  if (!partnerId || !partnerProfile) {
+  if (!partnerId) {
     return (
       <Card>
         <CardHeader>
@@ -121,6 +133,30 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
             </p>
             <p className="text-sm text-muted-foreground mt-2">
               Поделитесь кодом приглашения, чтобы партнер мог присоединиться
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!partnerProfile) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Информация о партнере
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              Партнер присоединился, но профиль еще загружается
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Информация о партнере будет доступна через несколько секунд
             </p>
           </div>
         </CardContent>
