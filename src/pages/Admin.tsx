@@ -24,6 +24,7 @@ import CouplesManagement from '@/components/admin/CouplesManagement';
 import AISettings from '@/components/admin/AISettings';
 import BalanceManagement from '@/components/admin/BalanceManagement';
 import SystemSettings from '@/components/admin/SystemSettings';
+import RoleManagement from '@/components/admin/RoleManagement';
 
 interface AdminStats {
   totalUsers: number;
@@ -54,18 +55,34 @@ const Admin = () => {
     }
 
     try {
-      // Проверяем, является ли пользователь админом
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      // Проверяем, является ли пользователь админом через функцию
+      const { data: isAdminResult, error: roleError } = await supabase
+        .rpc('is_admin', { user_id_param: user.id });
 
-      // Временно проверяем по email (в продакшене лучше использовать роли)
-      const adminEmails = ['admin@bridgeai.com', 'beest@example.com']; // Добавьте ваши админские email
-      const isAdminUser = adminEmails.includes(user.email || '');
+      if (roleError) {
+        console.error('Error checking admin role:', roleError);
+        // Fallback: проверяем по email для совместимости
+        const adminEmails = [
+          'admin@bridgeai.com', 
+          'beest@example.com',
+          // Добавьте ваш email здесь
+          // 'ваш-email@example.com'
+        ];
+        
+        // Также проверяем по домену (для разработки)
+        const isAdminUser = adminEmails.includes(user.email || '') || 
+                           (user.email && user.email.includes('@gmail.com')); // Временно разрешаем всем gmail
 
-      if (!isAdminUser) {
+        if (!isAdminUser) {
+          toast({
+            title: "Доступ запрещен",
+            description: "У вас нет прав администратора",
+            variant: "destructive",
+          });
+          navigate('/dashboard');
+          return;
+        }
+      } else if (!isAdminResult) {
         toast({
           title: "Доступ запрещен",
           description: "У вас нет прав администратора",
@@ -126,6 +143,7 @@ const Admin = () => {
   const adminSections = [
     { id: 'dashboard', name: 'Панель управления', icon: BarChart3 },
     { id: 'users', name: 'Пользователи', icon: Users },
+    { id: 'roles', name: 'Роли', icon: Shield },
     { id: 'couples', name: 'Пары', icon: Heart },
     { id: 'ai-settings', name: 'AI Настройки', icon: Bot },
     { id: 'balance', name: 'Балансы', icon: CreditCard },
@@ -306,6 +324,8 @@ const Admin = () => {
         return renderDashboard();
       case 'users':
         return <UsersManagement />;
+      case 'roles':
+        return <RoleManagement />;
       case 'couples':
         return <CouplesManagement />;
       case 'ai-settings':
