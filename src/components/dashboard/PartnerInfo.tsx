@@ -33,6 +33,7 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const isPartner1 = couple.partner1_id === currentUserId;
+  // Партнер - это тот, кто НЕ является текущим пользователем
   const partnerId = isPartner1 ? couple.partner2_id : couple.partner1_id;
 
   useEffect(() => {
@@ -152,7 +153,7 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
               <h3 className="text-lg font-semibold">
                 {partnerProfile.first_name} {partnerProfile.last_name}
               </h3>
-              {isPartner1 && (
+              {!isPartner1 && (
                 <Badge variant="outline" className="text-xs">
                   <Crown className="h-3 w-3 mr-1" />
                   Создатель пары
@@ -178,7 +179,7 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
             <MessageCircle className="h-5 w-5 text-primary mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Статус</p>
             <p className="font-semibold">
-              {couple.status === 'active' ? 'Активен' : 'Неактивен'}
+              {couple.status === 'active' && couple.partner2_id ? 'Активен' : 'Неактивен'}
             </p>
           </div>
         </div>
@@ -193,7 +194,7 @@ const PartnerInfo = ({ couple, currentUserId }: PartnerInfoProps) => {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Роль в паре:</span>
-            <span>{isPartner1 ? 'Партнер 2' : 'Партнер 1'}</span>
+            <span>{!isPartner1 ? 'Создатель пары' : 'Участник пары'}</span>
           </div>
         </div>
       </CardContent>

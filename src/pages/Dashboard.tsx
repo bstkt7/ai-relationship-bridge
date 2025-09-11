@@ -89,6 +89,7 @@ const Dashboard = () => {
       if (couplesData && couplesData.length > 0) {
         const coupleData = couplesData[0]; // Берем первую пару
         setCouple(coupleData);
+        // isPartner1 = true, если текущий пользователь является partner1_id
         setIsPartner1(coupleData.partner1_id === user?.id);
         fetchConversations(coupleData.id);
       }
