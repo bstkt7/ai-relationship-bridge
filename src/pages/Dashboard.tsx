@@ -8,7 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, LogOut, Users, MessageCircle, Lightbulb } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Heart, LogOut, Users, MessageCircle, Lightbulb, CreditCard } from 'lucide-react';
+import PaymentSection from '@/components/dashboard/PaymentSection';
+import ConversationCard from '@/components/dashboard/ConversationCard';
+import MobileNav from '@/components/dashboard/MobileNav';
 
 interface Profile {
   id: string;
@@ -38,6 +42,7 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [couple, setCouple] = useState<Couple | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -45,6 +50,7 @@ const Dashboard = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPartner1, setIsPartner1] = useState(false);
+  const [currentSection, setCurrentSection] = useState('status');
 
   useEffect(() => {
     if (!user) {
@@ -284,162 +290,240 @@ const Dashboard = () => {
     </div>;
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-lavender-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            <Heart className="h-8 w-8 text-primary mr-2" />
-            <h1 className="text-2xl font-bold text-primary">BridgeAI</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-muted-foreground">
-              Привет, {profile.first_name || 'друг'}!
-            </span>
-            <Button variant="ghost" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Выход
-            </Button>
-          </div>
+  const renderDesktopSidebar = () => (
+    <div className="hidden md:block w-64 bg-card border-r border-border p-6">
+      <div className="space-y-4">
+        <div className="flex items-center mb-6">
+          <Heart className="h-6 w-6 text-primary mr-2" />
+          <h2 className="text-lg font-bold text-primary">BridgeAI</h2>
+        </div>
+        
+        <div className="mb-6 p-3 bg-muted/50 rounded-lg">
+          <p className="text-sm text-muted-foreground">Привет,</p>
+          <p className="font-medium">{profile?.first_name || 'друг'}!</p>
         </div>
 
-        {!couple ? (
-          /* No couple setup */
-          <div className="max-w-2xl mx-auto">
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Подключение к партнеру
-                </CardTitle>
-                <CardDescription>
-                  Создайте код приглашения или присоединитесь к существующей паре
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+        <nav className="space-y-2">
+          <Button
+            variant={currentSection === 'status' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('status')}
+          >
+            <Users className="h-4 w-4 mr-3" />
+            Статус пары
+          </Button>
+          <Button
+            variant={currentSection === 'message' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('message')}
+          >
+            <MessageCircle className="h-4 w-4 mr-3" />
+            Сообщения
+          </Button>
+          <Button
+            variant={currentSection === 'recommendations' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('recommendations')}
+          >
+            <Lightbulb className="h-4 w-4 mr-3" />
+            Рекомендации
+          </Button>
+          <Button
+            variant={currentSection === 'payment' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setCurrentSection('payment')}
+          >
+            <CreditCard className="h-4 w-4 mr-3" />
+            Тарифы
+          </Button>
+        </nav>
+
+        <div className="mt-auto pt-6 border-t">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-destructive hover:text-destructive"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 mr-3" />
+            Выход
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSectionContent = () => {
+    if (!couple) {
+      return (
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              Подключение к партнеру
+            </CardTitle>
+            <CardDescription>
+              Создайте код приглашения или присоединитесь к существующей паре
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <Button onClick={generateInviteCode} className="w-full">
+                Создать код приглашения
+              </Button>
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Создайте код и поделитесь им с партнером
+              </p>
+            </div>
+
+            <div className="text-center">
+              <span className="text-muted-foreground">или</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-code">Код приглашения партнера</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="invite-code"
+                  placeholder="Введите код"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  className="uppercase"
+                />
+                <Button onClick={joinCouple} disabled={!inviteCode.trim()}>
+                  Присоединиться
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    switch (currentSection) {
+      case 'status':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Статус пары
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
                 <div>
-                  <Button onClick={generateInviteCode} className="w-full">
-                    Создать код приглашения
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-2 text-center">
-                    Создайте код и поделитесь им с партнером
+                  <p className="text-sm text-muted-foreground">
+                    Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Статус: <span className={`font-semibold ${couple.status === 'active' ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {couple.status === 'active' ? 'Активна' : 'Ожидание партнера'}
+                    </span>
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
 
-                <div className="text-center">
-                  <span className="text-muted-foreground">или</span>
-                </div>
+      case 'message':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <MessageCircle className="h-5 w-5 mr-2" />
+                Поделиться мыслями
+              </CardTitle>
+              <CardDescription>
+                Напишите о ваших чувствах. Только AI увидит ваше сообщение.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Поделитесь своими мыслями и чувствами..."
+                value={myMessage}
+                onChange={(e) => setMyMessage(e.target.value)}
+                className="min-h-[120px]"
+              />
+              <Button 
+                onClick={sendMessage} 
+                disabled={!myMessage.trim() || loading}
+                className="w-full"
+              >
+                {loading ? "Отправка..." : "Отправить AI"}
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-                <div className="space-y-2">
-                  <Label htmlFor="invite-code">Код приглашения партнера</Label>
-                  <div className="flex space-x-2">
-                    <Input
-                      id="invite-code"
-                      placeholder="Введите код"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value)}
-                      className="uppercase"
-                    />
-                    <Button onClick={joinCouple} disabled={!inviteCode.trim()}>
-                      Присоединиться
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      case 'recommendations':
+        return conversations.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Lightbulb className="h-5 w-5 mr-2" />
+                Советы от AI
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {conversations.map((conv) => (
+                <ConversationCard key={conv.id} conversation={conv} />
+              ))}
+            </CardContent>
+          </Card>
         ) : (
-          /* Main dashboard */
-          <div className="max-w-4xl mx-auto grid gap-6">
-            {/* Status Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Статус пары
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Код пары: <span className="font-mono font-bold">{couple.invite_code}</span>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Статус: <span className={`font-semibold ${couple.status === 'active' ? 'text-green-600' : 'text-yellow-600'}`}>
-                        {couple.status === 'active' ? 'Активна' : 'Ожидание партнера'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Lightbulb className="h-5 w-5 mr-2" />
+                Советы от AI
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-center py-8">
+                Пока нет рекомендаций. Отправьте сообщение, чтобы получить советы от AI.
+              </p>
+            </CardContent>
+          </Card>
+        );
 
-            {/* Message Input */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MessageCircle className="h-5 w-5 mr-2" />
-                  Поделиться мыслями
-                </CardTitle>
-                <CardDescription>
-                  Напишите о ваших чувствах. Только AI увидит ваше сообщение.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  placeholder="Поделитесь своими мыслями и чувствами..."
-                  value={myMessage}
-                  onChange={(e) => setMyMessage(e.target.value)}
-                  className="min-h-[120px]"
-                />
-                <Button 
-                  onClick={sendMessage} 
-                  disabled={!myMessage.trim() || loading}
-                  className="w-full"
-                >
-                  {loading ? "Отправка..." : "Отправить AI"}
-                </Button>
-              </CardContent>
-            </Card>
+      case 'payment':
+        return <PaymentSection currentPlan="free" messagesUsed={2} messagesLimit={5} />;
 
-            {/* AI Recommendations */}
-            {conversations.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Lightbulb className="h-5 w-5 mr-2" />
-                    Советы от AI
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {conversations.map((conv) => (
-                    <div key={conv.id} className="border rounded-lg p-4 space-y-3">
-                      {conv.ai_recommendation ? (
-                        <div className="bg-sky-50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-primary mb-2">Рекомендация AI:</h4>
-                          <p className="text-sm">{conv.ai_recommendation}</p>
-                        </div>
-                      ) : (
-                        <div className="bg-yellow-50 p-4 rounded-lg">
-                          <p className="text-sm text-yellow-800">
-                            {conv.partner1_message && conv.partner2_message 
-                              ? "AI анализирует ваши сообщения..." 
-                              : "Ожидание сообщения от партнера..."}
-                          </p>
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(conv.created_at).toLocaleString('ru-RU')}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-blue-light/20 to-lavender-light/20">
+      <div className="flex h-screen">
+        {/* Desktop Sidebar */}
+        {renderDesktopSidebar()}
+        
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border">
+            <div className="flex items-center">
+              <Heart className="h-6 w-6 text-primary mr-2" />
+              <h1 className="text-lg font-bold text-primary">BridgeAI</h1>
+            </div>
+            <MobileNav
+              currentSection={currentSection}
+              onSectionChange={setCurrentSection}
+              onSignOut={handleSignOut}
+              userName={profile?.first_name}
+            />
           </div>
-        )}
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-auto">
+            <div className="container mx-auto px-4 py-6 max-w-4xl">
+              {renderSectionContent()}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
