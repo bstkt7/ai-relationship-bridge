@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings, 
@@ -49,6 +50,7 @@ interface SystemSettings {
   
   // AI настройки
   aiEnabled: boolean;
+  aiProvider: 'openai' | 'gigachat';
   aiRateLimit: number;
   aiCostPerMessage: number;
 }
@@ -71,6 +73,7 @@ const SystemSettings = () => {
     maxLoginAttempts: 5,
     enableTwoFactor: false,
     aiEnabled: true,
+    aiProvider: 'gigachat',
     aiRateLimit: 100,
     aiCostPerMessage: 1,
   });
@@ -451,6 +454,28 @@ const SystemSettings = () => {
               checked={settings.aiEnabled}
               onCheckedChange={(value) => handleSettingChange('aiEnabled', value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="aiProvider">Провайдер AI</Label>
+            <Select
+              value={settings.aiProvider}
+              onValueChange={(value: 'openai' | 'gigachat') => handleSettingChange('aiProvider', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите провайдера AI" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gigachat">GigaChat (Сбер) - Рекомендуется</SelectItem>
+                <SelectItem value="openai">OpenAI</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {settings.aiProvider === 'gigachat' 
+                ? 'Российский AI с отличной поддержкой русского языка' 
+                : 'Международный AI от OpenAI'
+              }
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

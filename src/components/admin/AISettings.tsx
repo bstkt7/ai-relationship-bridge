@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Key, Settings, TestTube, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
@@ -18,18 +19,20 @@ interface AISettings {
   enabled: boolean;
   rateLimit: number;
   customPrompt: string;
+  provider: 'openai' | 'gigachat';
 }
 
 const AISettings = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState<AISettings>({
-    apiKey: '',
-    model: 'gpt-3.5-turbo',
+    apiKey: 'NGQzNWJkMTgtMjhmMi00ODQzLTliZWEtZTllYzUwZmQ2MzUwOmYwZWE3NWI4LWM5ZTAtNDM1OC1iOWJjLWNmNGUzYjQwZmFiNA==',
+    model: 'GigaChat:latest',
     maxTokens: 1000,
     temperature: 0.7,
     enabled: true,
     rateLimit: 100,
     customPrompt: 'Ты - AI-посредник для пар. Помогай разрешать конфликты и улучшать общение между партнерами.',
+    provider: 'gigachat',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -76,20 +79,79 @@ const AISettings = () => {
     setTestResult(null);
     
     try {
-      // В реальном приложении здесь был бы тестовый запрос к AI API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Симуляция запроса
+      if (settings.provider === 'gigachat') {
+        // Тест подключения к GigaChat
+        const tokenResponse = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${settings.apiKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'RqUID': crypto.randomUUID(),
+          },
+          body: 'scope=GIGACHAT_API_PERS',
+        });
+
+        if (!tokenResponse.ok) {
+          throw new Error(`GigaChat token error: ${tokenResponse.status}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        const accessToken = tokenData.access_token;
+
+        // Тестовый запрос к GigaChat
+        const testResponse = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'GigaChat:latest',
+            messages: [
+              { role: 'user', content: 'Привет! Это тестовое сообщение.' }
+            ],
+            max_tokens: 50,
+          }),
+        });
+
+        if (!testResponse.ok) {
+          throw new Error(`GigaChat API error: ${testResponse.status}`);
+        }
+      } else {
+        // Тест подключения к OpenAI
+        const testResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${settings.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              { role: 'user', content: 'Hello! This is a test message.' }
+            ],
+            max_tokens: 50,
+          }),
+        });
+
+        if (!testResponse.ok) {
+          throw new Error(`OpenAI API error: ${testResponse.status}`);
+        }
+      }
       
       setTestResult('success');
       toast({
         title: "Тест успешен",
-        description: "AI API работает корректно",
+        description: `${settings.provider === 'gigachat' ? 'GigaChat' : 'OpenAI'} API работает корректно`,
       });
     } catch (error) {
       console.error('Error testing AI connection:', error);
       setTestResult('error');
       toast({
         title: "Ошибка теста",
-        description: "Не удалось подключиться к AI API",
+        description: `Не удалось подключиться к ${settings.provider === 'gigachat' ? 'GigaChat' : 'OpenAI'} API`,
         variant: "destructive",
       });
     } finally {
@@ -151,9 +213,42 @@ const AISettings = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* AI Provider */}
+          <div className="space-y-2">
+            <Label htmlFor="provider">Провайдер AI</Label>
+            <Select
+              value={settings.provider}
+              onValueChange={(value: 'openai' | 'gigachat') => {
+                handleSettingChange('provider', value);
+                // Обновляем модель в зависимости от провайдера
+                if (value === 'gigachat') {
+                  handleSettingChange('model', 'GigaChat:latest');
+                } else {
+                  handleSettingChange('model', 'gpt-3.5-turbo');
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите провайдера AI" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gigachat">GigaChat (Сбер)</SelectItem>
+                <SelectItem value="openai">OpenAI</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {settings.provider === 'gigachat' 
+                ? 'Российский AI от Сбера, поддерживает русский язык' 
+                : 'Международный AI от OpenAI'
+              }
+            </p>
+          </div>
+
           {/* API Key */}
           <div className="space-y-2">
-            <Label htmlFor="apiKey">API ключ</Label>
+            <Label htmlFor="apiKey">
+              {settings.provider === 'gigachat' ? 'GigaChat API ключ' : 'OpenAI API ключ'}
+            </Label>
             <div className="flex space-x-2">
               <div className="relative flex-1">
                 <Input
@@ -161,7 +256,7 @@ const AISettings = () => {
                   type={showApiKey ? 'text' : 'password'}
                   value={settings.apiKey}
                   onChange={(e) => handleSettingChange('apiKey', e.target.value)}
-                  placeholder="Введите API ключ..."
+                  placeholder={settings.provider === 'gigachat' ? 'Введите GigaChat API ключ...' : 'Введите OpenAI API ключ...'}
                 />
                 <Button
                   type="button"

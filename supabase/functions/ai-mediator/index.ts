@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const gigachatApiKey = Deno.env.get('GIGACHAT_API_KEY') || 'NGQzNWJkMTgtMjhmMi00ODQzLTliZWEtZTllYzUwZmQ2MzUwOmYwZWE3NWI4LWM5ZTAtNDM1OC1iOWJjLWNmNGUzYjQwZmFiNA==';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,14 +47,36 @@ serve(async (req) => {
 
 Проанализируй эти сообщения и дай рекомендации для улучшения понимания между партнерами.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Получаем токен доступа для GigaChat
+    const tokenResponse = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${gigachatApiKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'RqUID': crypto.randomUUID(),
+      },
+      body: 'scope=GIGACHAT_API_PERS',
+    });
+
+    if (!tokenResponse.ok) {
+      console.error('GigaChat token error:', tokenResponse.status, await tokenResponse.text());
+      throw new Error(`GigaChat token error: ${tokenResponse.status}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Отправляем запрос к GigaChat API
+    const response = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'GigaChat:latest',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -65,8 +87,8 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status, await response.text());
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('GigaChat API error:', response.status, await response.text());
+      throw new Error(`GigaChat API error: ${response.status}`);
     }
 
     const data = await response.json();
