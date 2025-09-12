@@ -249,14 +249,16 @@ const Dashboard = () => {
         // Update existing conversation
         console.log('Updating existing conversation');
         conversationId = latestConv[0].id;
-        await supabase
+        const { error: updateError } = await supabase
           .from('conversations')
           .update({ [messageField]: myMessage })
           .eq('id', conversationId);
+          
+        if (updateError) throw updateError;
       } else {
         // Create new conversation
         console.log('Creating new conversation');
-        const { data: newConv } = await supabase
+        const { data: newConv, error: insertError } = await supabase
           .from('conversations')
           .insert({
             couple_id: couple.id,
@@ -265,15 +267,20 @@ const Dashboard = () => {
           .select()
           .single();
         
+        if (insertError) throw insertError;
         conversationId = newConv?.id;
       }
 
-      // Check if both messages are present, then call AI
-      const { data: updatedConv } = await supabase
+      // ВАЖНО: Получаем свежие данные после операции
+      const { data: updatedConv, error: fetchError } = await supabase
         .from('conversations')
         .select('*')
         .eq('id', conversationId)
         .single();
+        
+      if (fetchError) throw fetchError;
+      
+      console.log('Fresh conversation data:', updatedConv);
 
       if (updatedConv && updatedConv.partner1_message && updatedConv.partner2_message && !updatedConv.ai_recommendation) {
         console.log('Calling AI mediator with messages:', {
