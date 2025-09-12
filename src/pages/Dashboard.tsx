@@ -220,6 +220,14 @@ const Dashboard = () => {
   const sendMessage = async () => {
     if (!myMessage.trim() || !couple) return;
 
+    console.log('Sending message:', {
+      isPartner1,
+      userId: user?.id,
+      couplePartner1: couple.partner1_id,
+      couplePartner2: couple.partner2_id,
+      message: myMessage
+    });
+
     setLoading(true);
     try {
       // Get latest conversation to check if partner has sent a message
@@ -233,9 +241,13 @@ const Dashboard = () => {
       let conversationId;
       const messageField = isPartner1 ? 'partner1_message' : 'partner2_message';
       const otherMessageField = isPartner1 ? 'partner2_message' : 'partner1_message';
+      
+      console.log('Message fields:', { messageField, otherMessageField });
+      console.log('Latest conversation:', latestConv);
 
       if (latestConv && latestConv.length > 0 && !latestConv[0][messageField] && latestConv[0][otherMessageField]) {
         // Update existing conversation
+        console.log('Updating existing conversation');
         conversationId = latestConv[0].id;
         await supabase
           .from('conversations')
@@ -243,6 +255,7 @@ const Dashboard = () => {
           .eq('id', conversationId);
       } else {
         // Create new conversation
+        console.log('Creating new conversation');
         const { data: newConv } = await supabase
           .from('conversations')
           .insert({
