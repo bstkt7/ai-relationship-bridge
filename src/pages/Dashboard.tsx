@@ -230,7 +230,7 @@ const Dashboard = () => {
 
     setLoading(true);
     try {
-      // Get latest conversation to check if partner has sent a message
+      // Получаем последний разговор для проверки состояния
       const { data: latestConv } = await supabase
         .from('conversations')
         .select('*')
@@ -245,19 +245,32 @@ const Dashboard = () => {
       console.log('Message fields:', { messageField, otherMessageField });
       console.log('Latest conversation:', latestConv);
 
-      if (latestConv && latestConv.length > 0 && !latestConv[0][messageField] && latestConv[0][otherMessageField]) {
+      // Логика определения: обновлять или создавать новый разговор
+      const shouldUpdateExisting = latestConv && 
+                                  latestConv.length > 0 && 
+                                  !latestConv[0][messageField] && // Мое сообщение еще не отправлено
+                                  latestConv[0][otherMessageField] && // Партнер уже отправил сообщение
+                                  !latestConv[0].ai_recommendation; // AI еще не дал рекомендацию
+      
+      if (shouldUpdateExisting) {
         // Update existing conversation
-        console.log('Updating existing conversation');
+        console.log('Updating existing conversation with ID:', latestConv[0].id);
         conversationId = latestConv[0].id;
         const { error: updateError } = await supabase
           .from('conversations')
-          .update({ [messageField]: myMessage })
+          .update({ 
+            [messageField]: myMessage,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', conversationId);
           
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw updateError;
+        }
       } else {
         // Create new conversation
-        console.log('Creating new conversation');
+        console.log('Creating new conversation for couple:', couple.id);
         const { data: newConv, error: insertError } = await supabase
           .from('conversations')
           .insert({
@@ -267,8 +280,43 @@ const Dashboard = () => {
           .select()
           .single();
         
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw insertError;
+        }
         conversationId = newConv?.id;
+        console.log('New conversation created with ID:', conversationId);
+      }
+
+      // Дополнительная проверка: если обновление не сработало, попробуем еще раз
+      const { data: verifyUpdate, error: verifyError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
+        
+      if (verifyError) {
+        console.error('Error verifying update:', verifyError);
+        throw verifyError;
+      }
+      
+      console.log('Verified conversation after update:', verifyUpdate);
+      
+      // Если сообщение все еще не сохранилось, принудительно обновляем
+      if (!verifyUpdate[messageField]) {
+        console.log('Message not saved, forcing update...');
+        const { error: forceUpdateError } = await supabase
+          .from('conversations')
+          .update({ 
+            [messageField]: myMessage,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversationId);
+          
+        if (forceUpdateError) {
+          console.error('Force update failed:', forceUpdateError);
+          throw forceUpdateError;
+        }
       }
 
       // ВАЖНО: Получаем свежие данные после операции
@@ -281,6 +329,19 @@ const Dashboard = () => {
       if (fetchError) throw fetchError;
       
       console.log('Fresh conversation data:', updatedConv);
+      
+      // Дополнительная диагностика
+      console.log('Conversation state check:', {
+        conversationId,
+        hasPartner1Message: !!updatedConv?.partner1_message,
+        hasPartner2Message: !!updatedConv?.partner2_message,
+        hasAiRecommendation: !!updatedConv?.ai_recommendation,
+        partner1Message: updatedConv?.partner1_message,
+        partner2Message: updatedConv?.partner2_message,
+        currentUserIsPartner1: isPartner1,
+        messageFieldUsed: messageField,
+        messageValue: myMessage
+      });
 
       if (updatedConv && updatedConv.partner1_message && updatedConv.partner2_message && !updatedConv.ai_recommendation) {
         console.log('Calling AI mediator with messages:', {
@@ -319,6 +380,11 @@ const Dashboard = () => {
                 emotion_analysis: aiResponse.emotion_analysis
               })
               .eq('id', conversationId);
+              
+            toast({
+              title: "AI рекомендация получена!",
+              description: "Проверьте раздел 'Рекомендации'",
+            });
           } else {
             console.error('No recommendation in AI response:', aiResponse);
           }
@@ -344,7 +410,9 @@ const Dashboard = () => {
       
       toast({
         title: "Сообщение отправлено",
-        description: "Ваше сообщение было отправлено AI",
+        description: updatedConv?.partner1_message && updatedConv?.partner2_message 
+          ? "Сообщение отправлено! AI анализирует ваши сообщения..." 
+          : "Сообщение сохранено. Ожидаем сообщение от партнера...",
       });
     } catch (error) {
       console.error('Error sending message:', error);
