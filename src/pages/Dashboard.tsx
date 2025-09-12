@@ -263,23 +263,60 @@ const Dashboard = () => {
         .single();
 
       if (updatedConv && updatedConv.partner1_message && updatedConv.partner2_message && !updatedConv.ai_recommendation) {
-        // Call AI function
-        const { data: aiResponse } = await supabase.functions.invoke('ai-mediator', {
-          body: {
-            partner1_message: updatedConv.partner1_message,
-            partner2_message: updatedConv.partner2_message
-          }
+        console.log('Calling AI mediator with messages:', {
+          partner1_message: updatedConv.partner1_message,
+          partner2_message: updatedConv.partner2_message
         });
+        
+        try {
+          // Call AI function
+          const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-mediator', {
+            body: {
+              partner1_message: updatedConv.partner1_message,
+              partner2_message: updatedConv.partner2_message
+            }
+          });
 
-        if (aiResponse) {
-          await supabase
-            .from('conversations')
-            .update({
-              ai_recommendation: aiResponse.recommendation,
-              emotion_analysis: aiResponse.emotion_analysis
-            })
-            .eq('id', conversationId);
+          console.log('AI response received:', aiResponse);
+          console.log('AI error (if any):', aiError);
+
+          if (aiError) {
+            console.error('AI function error:', aiError);
+            toast({
+              title: "Ошибка AI",
+              description: "Не удалось получить рекомендацию от AI",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (aiResponse && aiResponse.recommendation) {
+            console.log('Updating conversation with AI response');
+            await supabase
+              .from('conversations')
+              .update({
+                ai_recommendation: aiResponse.recommendation,
+                emotion_analysis: aiResponse.emotion_analysis
+              })
+              .eq('id', conversationId);
+          } else {
+            console.error('No recommendation in AI response:', aiResponse);
+          }
+        } catch (aiCallError) {
+          console.error('Error calling AI function:', aiCallError);
+          toast({
+            title: "Ошибка AI",
+            description: "Ошибка при вызове AI функции",
+            variant: "destructive",
+          });
         }
+      } else {
+        console.log('AI not called because:', {
+          hasConversation: !!updatedConv,
+          hasPartner1Message: !!updatedConv?.partner1_message,
+          hasPartner2Message: !!updatedConv?.partner2_message,
+          hasAiRecommendation: !!updatedConv?.ai_recommendation
+        });
       }
 
       setMyMessage('');

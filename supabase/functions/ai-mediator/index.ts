@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const gigachatApiKey = Deno.env.get('GIGACHAT_API_KEY');
+console.log('GigaChat API key available:', !!gigachatApiKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,13 +16,26 @@ serve(async (req) => {
   }
 
   try {
+    console.log('AI mediator called with request:', req.method);
     const { partner1_message, partner2_message } = await req.json();
 
     if (!partner1_message || !partner2_message) {
+      console.error('Missing messages:', { partner1_message: !!partner1_message, partner2_message: !!partner2_message });
       return new Response(
         JSON.stringify({ error: 'Both partner messages are required' }),
         { 
           status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!gigachatApiKey) {
+      console.error('GigaChat API key not found in environment');
+      return new Response(
+        JSON.stringify({ error: 'GigaChat API key not configured' }),
+        { 
+          status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
