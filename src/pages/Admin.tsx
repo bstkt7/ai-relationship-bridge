@@ -89,7 +89,7 @@ const Admin = () => {
       }
       
       // Проверяем роль из профиля
-      const userRole = profileData?.role;
+      const userRole = (profileData as any)?.role;
       console.log('User role from database:', userRole);
       
       if (userRole === 'admin') {

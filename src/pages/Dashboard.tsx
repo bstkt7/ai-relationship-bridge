@@ -190,10 +190,11 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      if (!data.success) {
+      const result = data as any;
+      if (!result.success) {
         toast({
           title: "Ошибка",
-          description: data.error,
+          description: result.error,
           variant: "destructive",
         });
         return;
@@ -201,7 +202,7 @@ const Dashboard = () => {
 
       toast({
         title: "Успешно!",
-        description: data.message,
+        description: result.message,
       });
 
       setInviteCode(''); // Clear the input

@@ -73,10 +73,10 @@ const RoleManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole } as any)
+      .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -100,10 +100,10 @@ const RoleManagement = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'admin' })
-        .eq('user_id', user.id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'admin' } as any)
+      .eq('user_id', user.id);
 
       if (error) throw error;
 
