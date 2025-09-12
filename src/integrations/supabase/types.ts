@@ -104,6 +104,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          role: string | null
           updated_at: string
           user_id: string
         }
@@ -113,6 +114,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          role?: string | null
           updated_at?: string
           user_id: string
         }
@@ -122,6 +124,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          role?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -170,35 +173,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_couple_by_invite_code: {
+        Args: { invite_code_param: string }
+        Returns: {
+          created_at: string
+          id: string
+          invite_code: string
+          partner1_id: string
+          partner2_id: string
+          status: string
+          updated_at: string
+        }[]
+      }
       generate_invite_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      find_couple_by_invite_code: {
-        Args: {
-          invite_code_param: string
-        }
-        Returns: {
-          id: string
-          partner1_id: string
-          partner2_id: string
-          invite_code: string
-          status: string
-          created_at: string
-          updated_at: string
-        }[]
-      }
       join_couple_by_invite_code: {
-        Args: {
-          invite_code_param: string
-          user_id_param: string
-        }
-        Returns: {
-          success: boolean
-          error?: string
-          message?: string
-          couple_id?: string
-        }
+        Args: { invite_code_param: string; user_id_param: string }
+        Returns: Json
       }
     }
     Enums: {
