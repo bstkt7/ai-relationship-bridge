@@ -337,6 +337,15 @@ const Dashboard = () => {
         hasPartner2Message: !!updatedConv?.partner2_message,
         hasAiRecommendation: !!updatedConv?.ai_recommendation,
         partner1Message: updatedConv?.partner1_message,
+
+      // Дополнительная диагностика для отладки
+      console.log('Detailed conversation state:', {
+        conversationId,
+        partner1_message: updatedConv?.partner1_message,
+        partner2_message: updatedConv?.partner2_message,
+        ai_recommendation: updatedConv?.ai_recommendation,
+        shouldCallAI: !!(updatedConv?.partner1_message && updatedConv?.partner2_message && !updatedConv?.ai_recommendation)
+      });
         partner2Message: updatedConv?.partner2_message,
         currentUserIsPartner1: isPartner1,
         messageFieldUsed: messageField,
@@ -351,6 +360,7 @@ const Dashboard = () => {
         
         try {
           // Call AI function
+          console.log('🤖 Calling AI mediator function...');
           const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-mediator', {
             body: {
               partner1_message: updatedConv.partner1_message,
@@ -358,14 +368,19 @@ const Dashboard = () => {
             }
           });
 
-          console.log('AI response received:', aiResponse);
-          console.log('AI error (if any):', aiError);
+          console.log('🔍 AI response received:', {
+            hasResponse: !!aiResponse,
+            hasRecommendation: !!aiResponse?.recommendation,
+            hasError: !!aiError,
+            response: aiResponse,
+            error: aiError
+          });
 
           if (aiError) {
             console.error('AI function error:', aiError);
             toast({
               title: "Ошибка AI",
-              description: "Не удалось получить рекомендацию от AI",
+              description: `Ошибка AI: ${aiError.message || 'Неизвестная ошибка'}`,
               variant: "destructive",
             });
             return;
@@ -373,7 +388,7 @@ const Dashboard = () => {
 
           if (aiResponse && aiResponse.recommendation) {
             console.log('Updating conversation with AI response');
-            await supabase
+            const { error: updateError } = await supabase
               .from('conversations')
               .update({
                 ai_recommendation: aiResponse.recommendation,
@@ -381,18 +396,33 @@ const Dashboard = () => {
               })
               .eq('id', conversationId);
               
+            if (updateError) {
+              console.error('Error updating conversation with AI response:', updateError);
+              toast({
+                title: "Ошибка сохранения",
+                description: "Рекомендация получена, но не сохранена",
+                variant: "destructive",
+              });
+              return;
+            }
+
             toast({
               title: "AI рекомендация получена!",
               description: "Проверьте раздел 'Рекомендации'",
             });
           } else {
-            console.error('No recommendation in AI response:', aiResponse);
+            console.error('❌ No recommendation in AI response:', aiResponse);
+            toast({
+              title: "Пустой ответ AI",
+              description: "AI не вернул рекомендацию",
+              variant: "destructive",
+            });
           }
         } catch (aiCallError) {
           console.error('Error calling AI function:', aiCallError);
           toast({
             title: "Ошибка AI",
-            description: "Ошибка при вызове AI функции",
+            description: `Ошибка вызова AI: ${aiCallError.message}`,
             variant: "destructive",
           });
         }
