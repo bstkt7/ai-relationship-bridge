@@ -259,8 +259,7 @@ const Dashboard = () => {
         const { error: updateError } = await supabase
           .from('conversations')
           .update({ 
-            [messageField]: myMessage,
-            updated_at: new Date().toISOString()
+            [messageField]: myMessage
           })
           .eq('id', conversationId);
           
@@ -308,8 +307,7 @@ const Dashboard = () => {
         const { error: forceUpdateError } = await supabase
           .from('conversations')
           .update({ 
-            [messageField]: myMessage,
-            updated_at: new Date().toISOString()
+            [messageField]: myMessage
           })
           .eq('id', conversationId);
           
@@ -337,19 +335,11 @@ const Dashboard = () => {
         hasPartner2Message: !!updatedConv?.partner2_message,
         hasAiRecommendation: !!updatedConv?.ai_recommendation,
         partner1Message: updatedConv?.partner1_message,
-
-      // Дополнительная диагностика для отладки
-      console.log('Detailed conversation state:', {
-        conversationId,
-        partner1_message: updatedConv?.partner1_message,
-        partner2_message: updatedConv?.partner2_message,
-        ai_recommendation: updatedConv?.ai_recommendation,
-        shouldCallAI: !!(updatedConv?.partner1_message && updatedConv?.partner2_message && !updatedConv?.ai_recommendation)
-      });
         partner2Message: updatedConv?.partner2_message,
         currentUserIsPartner1: isPartner1,
         messageFieldUsed: messageField,
-        messageValue: myMessage
+        messageValue: myMessage,
+        shouldCallAI: !!(updatedConv?.partner1_message && updatedConv?.partner2_message && !updatedConv?.ai_recommendation)
       });
 
       if (updatedConv && updatedConv.partner1_message && updatedConv.partner2_message && !updatedConv.ai_recommendation) {
