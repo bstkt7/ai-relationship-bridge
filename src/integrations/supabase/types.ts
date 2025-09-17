@@ -23,6 +23,7 @@ export type Database = {
           id: string
           partner1_message: string | null
           partner2_message: string | null
+          updated_at: string | null
         }
         Insert: {
           ai_recommendation?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           id?: string
           partner1_message?: string | null
           partner2_message?: string | null
+          updated_at?: string | null
         }
         Update: {
           ai_recommendation?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           partner1_message?: string | null
           partner2_message?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -188,6 +191,14 @@ export type Database = {
       generate_invite_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_admin: {
+        Args: { user_id_param?: string }
+        Returns: boolean
+      }
+      is_moderator: {
+        Args: { user_id_param?: string }
+        Returns: boolean
       }
       join_couple_by_invite_code: {
         Args: { invite_code_param: string; user_id_param: string }
