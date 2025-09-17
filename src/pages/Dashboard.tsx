@@ -343,14 +343,20 @@ const Dashboard = () => {
       });
 
       if (updatedConv && updatedConv.partner1_message && updatedConv.partner2_message && !updatedConv.ai_recommendation) {
-        console.log('Calling AI mediator with messages:', {
+        console.log('🤖 Условия для вызова AI выполнены! Calling AI mediator with messages:', {
           partner1_message: updatedConv.partner1_message,
-          partner2_message: updatedConv.partner2_message
+          partner2_message: updatedConv.partner2_message,
+          conversationId: updatedConv.id
         });
         
         try {
           // Call AI function
-          console.log('🤖 Calling AI mediator function...');
+          console.log('🚀 Вызываем Supabase Edge Function ai-mediator...');
+          console.log('📊 Данные для отправки:', {
+            partner1_message: updatedConv.partner1_message,
+            partner2_message: updatedConv.partner2_message
+          });
+          
           const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-mediator', {
             body: {
               partner1_message: updatedConv.partner1_message,
@@ -358,7 +364,7 @@ const Dashboard = () => {
             }
           });
 
-          console.log('🔍 AI response received:', {
+          console.log('📥 AI response получен:', {
             hasResponse: !!aiResponse,
             hasRecommendation: !!aiResponse?.recommendation,
             hasError: !!aiError,
